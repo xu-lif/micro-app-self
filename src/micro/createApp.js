@@ -44,10 +44,15 @@ class CreateApp {
       frameElement.appendChild(node)
     })
     this.container.appendChild(frameElement)
+    this.sanboxJs.start()
     Object.values(this.sources.scripts).forEach(script => {
       // console.log('scripts', script)
-      this.sanboxJs.bindCodeExec(script.code)
+      (0, eval)(this.sanboxJs.bindCodeExec(script.code))
     })
+  }
+
+  onUnMount() {
+    this.sanboxJs.stop()
   }
 }
 
