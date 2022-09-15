@@ -1,7 +1,6 @@
 import fetchSource from './utils'
 
 const extraDomSources = (app, htmlDom) => {
-  
   const children = Array.from(htmlDom.children)
   if (children.length) {
     children.forEach(child => {
@@ -14,7 +13,8 @@ const extraDomSources = (app, htmlDom) => {
     // 获取dom属性
     const href = htmlDom.getAttribute('href')
     if (href && htmlDom.getAttribute('rel') === 'stylesheet') { // 判断是一个css link
-      app.sources.links[`${app.url}${href}`] = {
+      const urlFetch = href.match(/^http/) ? href : `${app.url}${href}`
+      app.sources.links[urlFetch] = {
         code: ''
       }
       htmlDom.parentNode.removeChild(htmlDom)
@@ -25,7 +25,8 @@ const extraDomSources = (app, htmlDom) => {
   if (htmlDom instanceof HTMLScriptElement) {
     const src = htmlDom.getAttribute('src')
     if (src) {
-      app.sources.scripts[`${app.url}${src}`] = {
+      const urlFetch = src.match(/^http/) ? src : `${app.url}${src}`
+      app.sources.scripts[urlFetch] = {
         code: '',
         isExternal: true
       }
@@ -54,7 +55,7 @@ const fetchCssSourceCode = (app, microHead, htmlDom) => {
         const styleDom = document.createElement('style')
         styleDom.textContent = code
         microHead.appendChild(styleDom)
-        app.onLoad(htmlDom)
+        // app.onLoad(htmlDom)
     })
     app.onLoad(htmlDom)
   })
@@ -63,7 +64,9 @@ const fetchCssSourceCode = (app, microHead, htmlDom) => {
 const fetchScriptSourceCode = (app, htmlDom) => {
   const promises = []
   Object.keys(app.sources.scripts).forEach(url => {
-    promises.push(fetchSource(url))
+    if (app.sources.scripts[url].isExternal) {
+      promises.push(fetchSource(url))
+    }
   })
   Promise.all(promises).then(codes => {
     codes.forEach((code, index) => {
@@ -98,9 +101,11 @@ export const loadHtml = (app) => {
     htmlDom.innerHTML = html
     // 提取出css link和script地址,后面单独fetch资源并缓存
     extraDomSources(app, htmlDom)
+    console.log('app.sources', app.sources)
+
     // fetch css资源，获取code,放在micro-head中，以及app缓存中
     // fetch script资源,获取code存入app缓存
-    const microHead = document.querySelector('micro-app-head')
+    const microHead = htmlDom.querySelector('micro-app-head')
     fetchSourcesCode(app, microHead, htmlDom)
     // return htmlDom
   }).catch(err => {
